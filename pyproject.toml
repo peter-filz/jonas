@@ -46,9 +46,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/peterfilz/jonas"
-Repository = "https://github.com/peterfilz/jonas"
-Issues = "https://github.com/peterfilz/jonas/issues"
+Homepage = "https://github.com/peter-filz/jonas"
+Repository = "https://github.com/peter-filz/jonas"
+Issues = "https://github.com/peter-filz/jonas/issues"
 
 [project.scripts]
 jonas = "jonas.cli:main"

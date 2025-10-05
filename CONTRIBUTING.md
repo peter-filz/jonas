@@ -6,7 +6,7 @@ Vielen Dank für dein Interesse an JONAS! Beiträge sind willkommen.
 
 1. **Repository forken und klonen:**
    ```bash
-   git clone https://github.com/peterfilz/jonas.git
+   git clone https://github.com/peter-filz/jonas.git
    cd jonas
    ```
 

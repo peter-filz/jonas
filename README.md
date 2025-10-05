@@ -33,7 +33,7 @@ Nach der Installation ist der Befehl `jonas` systemweit verfügbar.
 
 1. **Repository klonen:**
    ```bash
-   git clone https://github.com/peterfilz/jonas.git
+   git clone https://github.com/peter-filz/jonas.git
    cd jonas
    ```
 
