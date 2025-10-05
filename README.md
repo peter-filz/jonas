@@ -1,6 +1,9 @@
 # JONAS - Just Operate Nicely And Securely
 
+[![PyPI version](https://badge.fury.io/py/jonas.svg)](https://pypi.org/project/jonas/)
+[![Python versions](https://img.shields.io/pypi/pyversions/jonas.svg)](https://pypi.org/project/jonas/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Downloads](https://pepy.tech/badge/jonas)](https://pepy.tech/project/jonas)
 
 Ein intelligenter Shell-Assistent, der die OpenAI Responses API nutzt, um Shell-Befehle sicher auszuführen und natürliche Gespräche zu führen.
 
@@ -23,11 +26,17 @@ Ein intelligenter Shell-Assistent, der die OpenAI Responses API nutzt, um Shell-
 
 ### Via pip (empfohlen)
 
+JONAS ist auf [PyPI](https://pypi.org/project/jonas/) verfügbar:
+
 ```bash
 pip install jonas
 ```
 
-Nach der Installation ist der Befehl `jonas` systemweit verfügbar.
+Nach der Installation ist der Befehl `jonas` systemweit verfügbar:
+
+```bash
+jonas
+```
 
 ### Aus dem Quellcode
 
@@ -42,13 +51,28 @@ Nach der Installation ist der Befehl `jonas` systemweit verfügbar.
    pip install -e .
    ```
 
+## Schnellstart
+
+1. **Installieren:**
+   ```bash
+   pip install jonas
+   ```
+
+2. **Starten:**
+   ```bash
+   jonas
+   ```
+
+3. **Konfigurieren:**
+   Beim ersten Start wirst du interaktiv nach folgenden Werten gefragt:
+   - **OPENAI_API_KEY**: Dein OpenAI API-Schlüssel
+   - **OPENAI_MODEL**: Das zu verwendende Modell (z.B. `gpt-4o`, `gpt-4.1-mini`)
+   - **TOKENLIMIT**: Token-Schwellenwert für Output-Speicherung (Standard: 300)
+
+4. **Verwenden:**
+   Gib einfach Anweisungen in natürlicher Sprache ein!
+
 ## Konfiguration
-
-Beim ersten Start von JONAS wirst du interaktiv nach folgenden Werten gefragt:
-
-- **OPENAI_API_KEY**: Dein OpenAI API-Schlüssel
-- **OPENAI_MODEL**: Das zu verwendende Modell (z.B. `gpt-4o`, `gpt-4.1`)
-- **TOKENLIMIT**: Token-Schwellenwert für Output-Speicherung (Standard: 300)
 
 Die Konfiguration wird in `jonas.cfg` gespeichert.
 
@@ -161,6 +185,12 @@ jonas/
 - ⚠️ **Readonly-Flag** signalisiert Risiko (Rot vs. Magenta)
 - ⚠️ **Auto-Korrektur** verhindert Halluzinationen von Befehlsausführungen
 - ⚠️ **Output-Bereinigung** beim History-Trimming
+
+## Links
+
+- **PyPI**: https://pypi.org/project/jonas/
+- **GitHub**: https://github.com/peter-filz/jonas
+- **Issues**: https://github.com/peter-filz/jonas/issues
 
 ## Autor
 
