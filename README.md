@@ -5,7 +5,44 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Downloads](https://pepy.tech/badge/jonas)](https://pepy.tech/project/jonas)
 
-Ein intelligenter Shell-Assistent, der die OpenAI Responses API nutzt, um Shell-Befehle sicher auszuführen und natürliche Gespräche zu führen.
+> **Beschreibe einfach, was du erreichen willst – JONAS setzt es mit Shell-Befehlen um.**
+
+JONAS ist dein intelligenter Shell-Assistent, der das umfangreiche UNIX-Know-how von Large Language Models nutzt, um komplexe Systemaufgaben durch natürliche Sprache zu steuern. Kein mühsames Nachschlagen von Befehlen mehr – sage JONAS einfach, was du brauchst.
+
+## Warum JONAS?
+
+### 🎯 Einfach in der Anwendung
+Statt komplizierte Shell-Befehle zu recherchieren, beschreibst du einfach dein Ziel:
+- *"Zeige mir alle Python-Prozesse"*
+- *"Erstelle ein Backup meines Home-Verzeichnisses"*
+- *"Installiere Docker und starte einen nginx-Container"*
+
+JONAS versteht deine Absicht und führt die richtigen Befehle aus.
+
+### 🔒 Sicherheit an erster Stelle
+- **Explizite Freigabe**: Jeder Befehl wird vor der Ausführung angezeigt und erklärt
+- **Intention transparent**: Du siehst, was der Befehl bewirken soll
+
+### 🚀 Sofort einsatzbereit
+```bash
+pip install jonas
+jonas
+```
+Das war's! JONAS ist systemweit verfügbar und einsatzbereit.
+
+Beim ersten Start wirst du nach deinem **OpenAI API-Key** gefragt. Diesen kannst du auf [www.openai.com](https://www.openai.com) erstellen. Der Key wird lokal und sicher auf deinem System gespeichert.
+
+### 💡 Intelligente Systemverwaltung
+Nutze das gesamte UNIX-Wissen des LLM für:
+- **Systemüberwachung**: Prozesse, Logs, Ressourcen im Blick
+- **Updates & Installationen**: Software-Management ohne Handbuch
+- **Konfiguration**: Erstelle und bearbeite Config-Dateien
+- **Automatisierung**: Komplexe Workflows in natürlicher Sprache
+
+### 💰 Sparsamer Token-Verbrauch
+- Große Command-Outputs werden intelligent gespeichert
+- Nur relevante Informationen werden an das LLM gesendet
+- Session-Historie für Kontext ohne Token-Verschwendung
 
 ## Features
 
