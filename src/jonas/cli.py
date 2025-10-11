@@ -25,7 +25,7 @@ import getpass
 import tempfile
 from pathlib import Path
 from openai import OpenAI
-from .shell_tools import run_shell_command, get_output_head, get_output_tail, search_output, display_output, get_output_raw, FUNCTION_TOOLS, delete_outputs, set_token_threshold
+from .shell_tools import run_shell_command, get_output_head, get_output_tail, search_output, display_output, get_output_raw, FUNCTION_TOOLS, delete_outputs, set_token_threshold, _output_storage
 from rich.console import Console
 from rich.markdown import Markdown
 import sys
@@ -239,85 +239,91 @@ def interactive_configure(existing_cfg: dict = None) -> dict:
     # API-Key mit Validierungs-Schleife
     available_models = []
     api_key = None
-    while True:
-        if existing_api:
-            hint = f"(Enter = bestehenden Key behalten, aktuell: ***{existing_api[-4:]})"
-            entered_key = getpass_with_stars(f"OpenAI API-Key {hint}: ").strip()
-            if not entered_key:
-                api_key = existing_api
+    try:
+        while True:
+            if existing_api:
+                hint = f"(Enter = bestehenden Key behalten, aktuell: ***{existing_api[-4:]})"
+                entered_key = getpass_with_stars(f"OpenAI API-Key {hint}: ").strip()
+                if not entered_key:
+                    api_key = existing_api
+                else:
+                    api_key = entered_key
             else:
-                api_key = entered_key
-        else:
-            api_key = getpass_with_stars("OpenAI API-Key: ").strip()
-            while not api_key:
-                console.print("[red]Ein API-Key ist erforderlich.[/red]")
                 api_key = getpass_with_stars("OpenAI API-Key: ").strip()
+                while not api_key:
+                    console.print("[red]Ein API-Key ist erforderlich.[/red]")
+                    api_key = getpass_with_stars("OpenAI API-Key: ").strip()
+            
+            # Zeilenumbruch nach API-Key-Eingabe
+            print()
+            
+            # Validiere API-Key und hole Modell-Liste
+            console.print("[dim]Validiere API-Key und lade Modell-Liste...[/dim]", end=" ")
+            try:
+                test_client = OpenAI(api_key=api_key)
+                # Modell-Liste abrufen (kostenlos)
+                models_response = test_client.models.list()
+                available_models = [m.id for m in models_response.data]
+                console.print("[green]✓ Gültig[/green]")
+                print()
+                break  # API-Key ist gültig, raus aus der Schleife
+            except Exception as e:
+                console.print("[red]✗ Ungültiger API-Key[/red]")
+                console.print("[red]Bitte gültigen API-Key eingeben (Ctrl+C zum Abbrechen).[/red]")
+                print()
+                # Zurück zum Anfang der Schleife (existing_api bleibt erhalten)
         
-        # Zeilenumbruch nach API-Key-Eingabe
+        # Model mit Validierungs-Schleife
+        while True:
+            model = input(f"OPENAI_MODEL [{existing_model}]: ").strip()
+            if not model:
+                model = existing_model
+            
+            # Validiere Modell
+            if model in available_models:
+                break  # Modell ist gültig, raus aus der Schleife
+            else:
+                console.print(f"[red]Ungültiges Modell: '{model}'[/red]")
+                console.print("[yellow]Bitte gültiges Modell eingeben (Ctrl+C zum Abbrechen).[/yellow]")
+                print()
+        
+        # Leerzeile für harmonisches Layout
         print()
         
-        # Validiere API-Key und hole Modell-Liste
-        console.print("[dim]Validiere API-Key und lade Modell-Liste...[/dim]", end=" ")
-        try:
-            test_client = OpenAI(api_key=api_key)
-            # Modell-Liste abrufen (kostenlos)
-            models_response = test_client.models.list()
-            available_models = [m.id for m in models_response.data]
-            console.print("[green]✓ Gültig[/green]")
-            print()
-            break  # API-Key ist gültig, raus aus der Schleife
-        except Exception as e:
-            console.print("[red]✗ Ungültiger API-Key[/red]")
-            console.print("[red]Bitte gültigen API-Key eingeben (Ctrl+C zum Abbrechen).[/red]")
-            print()
-            # Zurück zum Anfang der Schleife (existing_api bleibt erhalten)
-    
-    # Model mit Validierungs-Schleife
-    while True:
-        model = input(f"OPENAI_MODEL [{existing_model}]: ").strip()
-        if not model:
-            model = existing_model
+        # Tokenlimit mit Validierungs-Schleife
+        while True:
+            token_str = input(f"TOKENLIMIT [{existing_token}]: ").strip()
+            if not token_str:
+                token_str = existing_token
+            
+            try:
+                token_int = int(token_str)
+                if token_int <= 0:
+                    raise ValueError("Muss größer als 0 sein")
+                break  # Gültiger Wert, raus aus der Schleife
+            except ValueError:
+                console.print("[red]Ungültiger Wert. Bitte positive Ganzzahl eingeben (Ctrl+C zum Abbrechen).[/red]")
+                print()
         
-        # Validiere Modell
-        if model in available_models:
-            break  # Modell ist gültig, raus aus der Schleife
-        else:
-            console.print(f"[red]Ungültiges Modell: '{model}'[/red]")
-            console.print("[yellow]Bitte gültiges Modell eingeben (Ctrl+C zum Abbrechen).[/yellow]")
-            print()
-    
-    # Leerzeile für harmonisches Layout
-    print()
-    
-    # Tokenlimit mit Validierungs-Schleife
-    while True:
-        token_str = input(f"TOKENLIMIT [{existing_token}]: ").strip()
-        if not token_str:
-            token_str = existing_token
+        final_cfg = {
+            "OPENAI_API_KEY": api_key,
+            "OPENAI_MODEL": model,
+            "TOKENLIMIT": str(token_int),
+        }
         
-        try:
-            token_int = int(token_str)
-            if token_int <= 0:
-                raise ValueError("Muss größer als 0 sein")
-            break  # Gültiger Wert, raus aus der Schleife
-        except ValueError:
-            console.print("[red]Ungültiger Wert. Bitte positive Ganzzahl eingeben (Ctrl+C zum Abbrechen).[/red]")
-            print()
-    
-    final_cfg = {
-        "OPENAI_API_KEY": api_key,
-        "OPENAI_MODEL": model,
-        "TOKENLIMIT": str(token_int),
-    }
-    
-    write_config_secure(final_cfg)
-    console.print("\n[green]Konfiguration gespeichert.[/green]")
-    console.print(f"Speicherort: {CONFIG_FILE}")
-    console.print(f"OPENAI_MODEL = {model}")
-    console.print(f"TOKENLIMIT   = {token_int}")
-    console.print(f"API-Key      = ***{api_key[-4:]}\n")
-    
-    return final_cfg
+        write_config_secure(final_cfg)
+        console.print("\n[green]Konfiguration gespeichert.[/green]")
+        console.print(f"Speicherort: {CONFIG_FILE}")
+        console.print(f"OPENAI_MODEL = {model}")
+        console.print(f"TOKENLIMIT   = {token_int}")
+        console.print(f"API-Key      = ***{api_key[-4:]}\n")
+        
+        return final_cfg
+        
+    except KeyboardInterrupt:
+        console.print("\n\n[bold blue]Konfiguration abgebrochen.[/bold blue]")
+        console.print("[bold blue]Auf Wiedersehen![/bold blue]")
+        sys.exit(0)
 
 # Console initialisieren (muss vor interactive_configure sein)
 console = Console()
@@ -348,9 +354,6 @@ MODEL = cfg.get("OPENAI_MODEL", DEFAULT_MODEL)
 # Setze TOKENLIMIT für shell_tools.py
 token_limit = int(cfg.get("TOKENLIMIT", str(DEFAULT_TOKENLIMIT)))
 set_token_threshold(token_limit)
-
-# Konfiguration
-VERBOSE = os.getenv("VERBOSE", "false").lower() == "true"
 
 # System-Prompt mit OS-Information
 os_info = platform.system()
@@ -605,7 +608,7 @@ def _wrap_visual(text: str, max_width: int) -> list:
     """Zeilenumbruch mit Erhalt von Mehrfach-Leerzeichen.
     Es wird bis zum Zeilenende gefüllt. Bevorzugt wird der letzte Space
     vor der Breite; wenn keiner vorhanden ist, wird hart umbrochen.
-    Markup-Tags werden bei der Breitenberechnung ignoriert.
+    Markup-Tags werden bei der Breitenberechnung ignoriert, aber im Output beibehalten.
     """
     lines = []
     for paragraph in text.split('\n'):
@@ -620,6 +623,21 @@ def _wrap_visual(text: str, max_width: int) -> list:
             lines.append(paragraph)
             continue
 
+        # Text muss umgebrochen werden
+        # Wenn der Text Markup enthält, behalte es für die gesamte Zeile
+        # (vereinfachte Lösung: Markup gilt für kompletten Text)
+        has_markup = paragraph != stripped
+        
+        if has_markup:
+            # Extrahiere öffnende und schließende Tags
+            opening_tags = re.findall(r'\[[a-zA-Z_][a-zA-Z0-9_]*\]', paragraph)
+            closing_tags = re.findall(r'\[/[a-zA-Z_][a-zA-Z0-9_]*\]', paragraph)
+            markup_prefix = ''.join(opening_tags)
+            markup_suffix = ''.join(closing_tags)
+        else:
+            markup_prefix = ""
+            markup_suffix = ""
+        
         # Text muss umgebrochen werden - arbeite mit dem Text ohne Markup
         start = 0
         n = len(stripped)
@@ -641,14 +659,16 @@ def _wrap_visual(text: str, max_width: int) -> list:
 
             if idx == n:
                 # Rest passt vollständig
-                lines.append(stripped[start:n])
+                line_content = stripped[start:n]
+                lines.append(f"{markup_prefix}{line_content}{markup_suffix}" if has_markup else line_content)
                 start = n
                 break
 
             # Zeilenumbruch bestimmen
             if last_space_idx >= start:
                 # Breche am letzten Space
-                lines.append(stripped[start:last_space_idx + 1])
+                line_content = stripped[start:last_space_idx + 1]
+                lines.append(f"{markup_prefix}{line_content}{markup_suffix}" if has_markup else line_content)
                 start = last_space_idx + 1
             else:
                 # Kein Space im Fenster -> harter Umbruch
@@ -657,7 +677,8 @@ def _wrap_visual(text: str, max_width: int) -> list:
                 while take_idx < n and take_w + _char_visual_width(stripped[take_idx]) <= max_width:
                     take_w += _char_visual_width(stripped[take_idx])
                     take_idx += 1
-                lines.append(stripped[start:take_idx])
+                line_content = stripped[start:take_idx]
+                lines.append(f"{markup_prefix}{line_content}{markup_suffix}" if has_markup else line_content)
                 start = take_idx
 
     return lines
@@ -761,28 +782,32 @@ def print_startup_screen():
     print_boxed_raw(" ####     #####   #     #  #     #  ###### ", width)
     print_boxed_text("", width)  # Leerzeile
     print_boxed_text("(Just Operate Nicely And Securely)", width)
-    print_boxed_text_right("v1.4.1 by Peter Filz", width)
+    print_boxed_text_right("v1.4.3 by Peter Filz", width)
+    print_boxed_text("", width)  # Leerzeile
+    
+    # Einleitung
+    intro = "JONAS ist ein KI-gestützter Shell-Assistent, der natürliche Sprache in Shell-Befehle übersetzt. Er nutzt das umfangreiche UNIX-Wissen von Large Language Modellen, um dir bei Systemverwaltung, Monitoring und Automatisierung zu helfen."
+    print_boxed_text(intro, width)
     print_boxed_text("", width)  # Leerzeile
     
     # Beschreibung
-    description = "Ein intelligenter Shell-Assistent mit Tool-Integration. Gebe Anweisungen in natürlicher Sprache und lass dir bei der Systemverwaltung helfen."
-    print_boxed_text(description, width)
+    print_boxed_text("[cyan]Gebe Anweisungen in natürlicher Sprache oder frage einfach, was Du zu Deinem System wissen möchtest.[/cyan]", width)
+    print_boxed_text("", width)  # Leerzeile
+    
+    # Sicherheitshinweis (ohne Icons)
+    print_boxed_text("[red]Shell-Befehle werden von JONAS nur nach vorheriger Bestätigung durch Dich ausgeführt.[/red]", width)
     print_boxed_text("", width)  # Leerzeile
     
     # Befehle (ohne Icons)
-    print_boxed_text("VERFÜGBARE BEFEHLE IM CHAT:", width)
+    print_boxed_text("VERFÜGBARE SONDERBEFEHLE IM CHAT:", width)
     print_boxed_text("", width)
     print_boxed_text("- [cyan]exit, quit, bye[/cyan]    — Chat beenden", width)
-    print_boxed_text("- [cyan]configure[/cyan]          — Konfiguration ändern", width)
+    print_boxed_text("- [cyan]new[/cyan]                — Starte neue Unterhaltung (spart Token)", width)
+    print_boxed_text("- [cyan]config[/cyan]             — Konfiguration ändern", width)
     print_boxed_text("- [cyan]delconfig[/cyan]          — Konfiguration löschen und beenden", width)
     print_boxed_text("- [cyan]history[/cyan]            — Gespeicherte Session-Historie anzeigen", width)
-    print_boxed_text("", width)
-    print_boxed_text("- [cyan]Gebe Anweisungen in natürlicher Sprache[/cyan]", width)
-    print_boxed_text("", width)
-    
-    # Sicherheitshinweis (ohne Icons)
-    print_boxed_text("[red]WICHTIG: Shell-Befehle werden nur nach vorheriger Bestätigung ausgeführt.[/red]", width)
-    print_boxed_text("", width)
+    print_boxed_text("- [cyan]help[/cyan]               — Zeige Startbildschirm erneut", width)
+    print_boxed_text("", width)  # Leerzeile
     
     # Aktuelle Konfiguration anzeigen
     current_cfg = load_config()
@@ -863,9 +888,6 @@ def process_dialog_step(dialog_history):
                 maybe_json = json.loads(response_text)
                 if isinstance(maybe_json, dict) and "executed_commands" in maybe_json:
                     # Modell hat behauptet, Befehle ausgeführt zu haben, aber keine Tool-Calls gemacht
-                    if VERBOSE:
-                        console.print("[yellow]Warnung: Modell behauptete Befehlsausführung ohne Tool-Call. Fordere korrekten Tool-Call an.[/yellow]")
-                    
                     # Sende Korrektur-Nachricht ans Modell
                     correction_response = client.responses.create(
                         model=MODEL,
@@ -968,23 +990,15 @@ def _handle_response_internal(response, max_iterations=10):
         
         # Wenn keine Tool-Calls mehr vorhanden sind, sind wir fertig
         if not tool_calls:
-            if VERBOSE and iteration > 1:
-                console.print(f"[dim]Tool-Call-Schleife beendet nach {iteration-1} Iteration(en)[/dim]")
             # Speichere ausgeführte Befehle in der Response
             current_response._executed_commands = executed_commands
             return current_response
-        
-        if VERBOSE:
-            console.print(f"[dim]Iteration {iteration}: {len(tool_calls)} Tool-Call(s)[/dim]")
         
         # Führe alle Tool-Calls aus
         tool_outputs = []
         
         for i, tool_call in enumerate(tool_calls):
             tool_name = tool_call['name']
-            
-            if VERBOSE:
-                console.print(f"\n[yellow]Tool-Aufruf {i+1}/{len(tool_calls)}:[/yellow] {tool_name}({tool_call['arguments']})")
             
             # Unterscheide zwischen Tools, die Sicherheitsabfrage benötigen und solchen, die es nicht tun
             if tool_name == "run_shell_command":
@@ -1019,9 +1033,6 @@ def _handle_response_internal(response, max_iterations=10):
                     console.print(f"Befehl:    [{color}]{command}[/{color}]")
                     confirm = input("Ausführen? [j/N] ").strip().lower()
                     
-                    if VERBOSE:
-                        console.print(f"[dim]Benutzer-Antwort: '{confirm}'[/dim]")
-                    
                     # Bei ungültiger Eingabe: Zeilen löschen und erneut fragen
                     if confirm not in ("j", "ja", "y", "n", "nein", "no"):
                         for _ in range(total_lines):
@@ -1038,8 +1049,6 @@ def _handle_response_internal(response, max_iterations=10):
                     show_thinking(f"Führe aus: {command}")
                 
                 if confirm not in ("j", "ja", "y"):
-                    if VERBOSE:
-                        console.print("[red]Abgebrochen – kein Shell-Befehl ausgeführt.[/red]")
                     result = "Befehl wurde vom Benutzer abgebrochen."
                 else:
                     # Tool ausführen
@@ -1068,31 +1077,18 @@ def _handle_response_internal(response, max_iterations=10):
                                 "command": command,
                                 "output_id": output_id
                             })
-                    
-                    # Shell-Output nur anzeigen wenn VERBOSE=True
-                    if VERBOSE:
-                        console.print(f"\n[green]Shell-Output:[/green]")
-                        console.print(f"[dim]{result}[/dim]\n")
             
             elif tool_name == "get_output_head":
                 # get_output_head benötigt keine Sicherheitsabfrage
                 output_id = tool_call['arguments'].get('output_id', '')
                 num_lines = tool_call['arguments'].get('num_lines', 10)
                 result = get_output_head(output_id, num_lines)
-                
-                if VERBOSE:
-                    console.print(f"\n[green]Head abgerufen ({output_id}, {num_lines} Zeilen):[/green]")
-                    console.print(f"[dim]{result[:200]}...[/dim]\n" if len(result) > 200 else f"[dim]{result}[/dim]\n")
             
             elif tool_name == "get_output_tail":
                 # get_output_tail benötigt keine Sicherheitsabfrage
                 output_id = tool_call['arguments'].get('output_id', '')
                 num_lines = tool_call['arguments'].get('num_lines', 10)
                 result = get_output_tail(output_id, num_lines)
-                
-                if VERBOSE:
-                    console.print(f"\n[green]Tail abgerufen ({output_id}, {num_lines} Zeilen):[/green]")
-                    console.print(f"[dim]{result[:200]}...[/dim]\n" if len(result) > 200 else f"[dim]{result}[/dim]\n")
             
             elif tool_name == "search_output":
                 # search_output benötigt keine Sicherheitsabfrage
@@ -1100,10 +1096,6 @@ def _handle_response_internal(response, max_iterations=10):
                 search_term = tool_call['arguments'].get('search_term', '')
                 max_results = tool_call['arguments'].get('max_results', 10)
                 result = search_output(output_id, search_term, max_results)
-                
-                if VERBOSE:
-                    console.print(f"\n[green]Suche in {output_id} nach '{search_term}':[/green]")
-                    console.print(f"[dim]{result[:200]}...[/dim]\n" if len(result) > 200 else f"[dim]{result}[/dim]\n")
             
             elif tool_name == "display_output":
                 # display_output zeigt Output direkt an User, ohne ihn ans LLM zu senden
@@ -1133,10 +1125,6 @@ def _handle_response_internal(response, max_iterations=10):
                     
                     # Ans LLM nur Bestätigung senden
                     result = f"Output '{output_id}' wurde dem Benutzer vollständig angezeigt."
-                
-                if VERBOSE:
-                    console.print(f"\n[green]Display-Output ({output_id}):[/green]")
-                    console.print(f"[dim]{result}[/dim]\n")
             
             else:
                 result = f"Unbekanntes Tool: {tool_name}"
@@ -1182,6 +1170,38 @@ def handle_response(response, conversation_id=None):
 
 def main():
     """Hauptfunktion für den interaktiven Chat mit globaler Historie."""
+    # Prüfe auf --version oder --help Parameter
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        if arg in ("--version", "-v"):
+            from . import __version__
+            print(f"JONAS version {__version__}")
+            sys.exit(0)
+        elif arg in ("--help", "-h"):
+            print("JONAS - Just Operate Nicely And Securely")
+            print()
+            print("Ein intelligenter Shell-Assistent mit OpenAI Integration.")
+            print()
+            print("Verwendung:")
+            print("  jonas              Startet den interaktiven Chat")
+            print("  jonas --version    Zeigt die Version an")
+            print("  jonas --help       Zeigt diese Hilfe an")
+            print()
+            print("Im Chat verfügbare Befehle:")
+            print("  exit, quit, bye    Chat beenden")
+            print("  new                Neue Unterhaltung starten (spart Token)")
+            print("  config             Konfiguration ändern")
+            print("  delconfig          Konfiguration löschen")
+            print("  history            Session-Historie anzeigen")
+            print("  help               Startbildschirm erneut anzeigen")
+            print()
+            print("Weitere Informationen: https://github.com/peter-filz/jonas")
+            sys.exit(0)
+        else:
+            print(f"Unbekannter Parameter: {sys.argv[1]}")
+            print("Verwende 'jonas --help' für Hilfe.")
+            sys.exit(1)
+    
     print_startup_screen()
     
     import uuid
@@ -1216,8 +1236,17 @@ def main():
                 console.print("[bold blue]Auf Wiedersehen![/bold blue]")
                 break
             
+            # Neue Unterhaltung starten
+            if user_input.lower() == "new":
+                session_id = str(uuid.uuid4())  # Neue Session-ID
+                # Lösche alle Output-Zwischenspeicher (out1, out2, etc.)
+                if _output_storage:
+                    delete_outputs(list(_output_storage.keys()))
+                console.print("[green]Neue Unterhaltung gestartet. Historie und Outputs gelöscht.[/green]\n")
+                continue
+            
             # Spezielle Befehle
-            if user_input.lower() == "configure":
+            if user_input.lower() in ("config", "configure"):
                 cfg = load_config()
                 interactive_configure(cfg)
                 # Neu laden nach Konfiguration
@@ -1241,13 +1270,6 @@ def main():
                     console.print("[yellow]Keine Konfiguration vorhanden.[/yellow]")
                 console.print("[bold blue]Auf Wiedersehen![/bold blue]")
                 break
-            
-            if user_input.lower() == "verbose":
-                global VERBOSE
-                VERBOSE = not VERBOSE
-                status = "aktiviert" if VERBOSE else "deaktiviert"
-                console.print(f"[yellow]VERBOSE-Modus {status}.[/yellow]\n")
-                continue
             
             if user_input.lower() == "history":
                 history = get_dialog_history(session_id)
@@ -1301,6 +1323,10 @@ def main():
                     
                     # Abschließende Trennlinie
                     console.print(f"[magenta]{separator}[/magenta]")
+                continue
+            
+            if user_input.lower() == "help":
+                print_startup_screen()
                 continue
             
             # Aktuelle Dialog-Historie abrufen und neue User-Nachricht hinzufügen

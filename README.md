@@ -43,6 +43,7 @@ Nutze das gesamte UNIX-Wissen des LLM für:
 - Große Command-Outputs werden intelligent gespeichert
 - Nur relevante Informationen werden an das LLM gesendet
 - Session-Historie für Kontext ohne Token-Verschwendung
+- **`new` Befehl**: Starte neue Unterhaltung und spare Token
 
 ## Features
 
@@ -103,8 +104,8 @@ jonas
 3. **Konfigurieren:**
    Beim ersten Start wirst du interaktiv nach folgenden Werten gefragt:
    - **OPENAI_API_KEY**: Dein OpenAI API-Schlüssel
-   - **OPENAI_MODEL**: Das zu verwendende Modell (z.B. `gpt-4o`, `gpt-4.1-mini`)
-   - **TOKENLIMIT**: Token-Schwellenwert für Output-Speicherung (Standard: 300)
+   - **OPENAI_MODEL**: Das zu verwendende Modell (z.B. `gpt-4o-mini`, `gpt-4o`, `o1-mini`)
+   - **TOKENLIMIT**: Token-Schwellenwert für Output-Speicherung (Standard: 2000)
 
 4. **Verwenden:**
    Gib einfach Anweisungen in natürlicher Sprache ein!
@@ -127,11 +128,19 @@ jonas
 
 ### Verfügbare Befehle:
 - `exit`, `quit`, `bye` - Chat beenden
-- `config` (oder `configure`) - Konfiguration ändern (API-Key, Model, TokenLimit)
+- `new` - Starte neue Unterhaltung (spart Token, löscht Historie und Outputs)
+- `config` - Konfiguration ändern (API-Key, Model, TokenLimit)
 - `delconfig` - Konfiguration löschen und beenden
 - `history` - Gespeicherte Session-Historie anzeigen
+- `help` - Startbildschirm erneut anzeigen
 
-- Oder gebe Anweisungen in natürlicher Sprache ein
+### Kommandozeilen-Parameter:
+- `jonas` - Startet den interaktiven Chat
+- `jonas --version` (oder `-v`) - Zeigt die Version an
+- `jonas --help` (oder `-h`) - Zeigt die Hilfe an
+
+### Natürliche Sprache:
+- Gebe einfach Anweisungen in natürlicher Sprache ein
 
 ### Beispiel-Interaktion:
 
