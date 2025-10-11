@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jonas"
-version = "1.4.1"
+version = "1.4.2"
 description = "JONAS - Just Operate Nicely And Securely: Ein intelligenter Shell-Assistent mit OpenAI Integration"
 readme = "README.md"
 authors = [

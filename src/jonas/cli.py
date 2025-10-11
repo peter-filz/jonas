@@ -761,7 +761,7 @@ def print_startup_screen():
     print_boxed_raw(" ####     #####   #     #  #     #  ###### ", width)
     print_boxed_text("", width)  # Leerzeile
     print_boxed_text("(Just Operate Nicely And Securely)", width)
-    print_boxed_text_right("v1.4 by Peter Filz", width)
+    print_boxed_text_right("v1.4.1 by Peter Filz", width)
     print_boxed_text("", width)  # Leerzeile
     
     # Beschreibung
@@ -1012,16 +1012,26 @@ def _handle_response_internal(response, max_iterations=10):
                 total_lines = intention_lines + command_lines + 1  # +1 für Eingabezeile
                 
                 # Formatierte Sicherheitsabfrage ausgeben (Farbe abhängig von readonly)
-                console.print(f"Intention: [{color}]{intention}[/{color}]")
-                console.print(f"Befehl:    [{color}]{command}[/{color}]")
-                confirm = input("Ausführen? [j/N] ").strip().lower()
-                
-                if VERBOSE:
-                    console.print(f"[dim]Benutzer-Antwort: '{confirm}'[/dim]")
-                
-                # Alle Zeilen löschen nach der Antwort
-                for _ in range(total_lines):
-                    print("\033[F\033[K", end="", flush=True)
+                # Wiederhole die Frage bei ungültiger Eingabe
+                confirm = None
+                while confirm not in ("j", "ja", "y", "n", "nein", "no"):
+                    console.print(f"Intention: [{color}]{intention}[/{color}]")
+                    console.print(f"Befehl:    [{color}]{command}[/{color}]")
+                    confirm = input("Ausführen? [j/N] ").strip().lower()
+                    
+                    if VERBOSE:
+                        console.print(f"[dim]Benutzer-Antwort: '{confirm}'[/dim]")
+                    
+                    # Bei ungültiger Eingabe: Zeilen löschen und erneut fragen
+                    if confirm not in ("j", "ja", "y", "n", "nein", "no"):
+                        for _ in range(total_lines):
+                            print("\033[F\033[K", end="", flush=True)
+                        continue
+                    
+                    # Alle Zeilen löschen nach gültiger Antwort
+                    for _ in range(total_lines):
+                        print("\033[F\033[K", end="", flush=True)
+                    break
                 
                 # Thinking-Text wieder anzeigen wenn Tool ausgeführt wird
                 if confirm in ("j", "ja", "y"):
