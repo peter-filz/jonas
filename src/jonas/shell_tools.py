@@ -82,15 +82,29 @@ def run_shell_command(command: str, intention: str) -> str:
             timeout=300,  # Timeout: 5 Minuten für längere Befehle wie apt-get upgrade
         )
         
-        # Prüfe auf Fehler (Exit Code != 0 oder stderr enthält Daten)
-        if result.returncode != 0 or (result.stderr and result.stderr.strip()):
+        # Prüfe auf Fehler (nur Exit Code != 0)
+        # Hinweis: stderr wird nicht mehr als Fehlerindikator verwendet, da viele
+        # erfolgreiche Befehle (curl, git, npm, etc.) auch nach stderr schreiben
+        if result.returncode != 0:
             # Fehler aufgetreten - NICHT speichern
-            error_msg = result.stderr.strip() if result.stderr and result.stderr.strip() else result.stdout.strip()
-            output = f"Fehler (Exit Code {result.returncode}): {error_msg}" if error_msg else f"Fehler: Befehl fehlgeschlagen mit Exit Code {result.returncode}"
+            # Kombiniere stdout und stderr für vollständige Fehlermeldung
+            error_parts = []
+            if result.stderr and result.stderr.strip():
+                error_parts.append(result.stderr.strip())
+            if result.stdout and result.stdout.strip():
+                error_parts.append(result.stdout.strip())
+            error_msg = "\n".join(error_parts) if error_parts else "(keine Fehlermeldung)"
+            output = f"Fehler (Exit Code {result.returncode}):\n{error_msg}"
             return output  # Direkt zurückgeben ohne Speicherung
         else:
-            # Erfolgreiche Ausführung
-            output = result.stdout.strip() or "(kein Output)"
+            # Erfolgreiche Ausführung (Exit Code 0)
+            # Kombiniere stdout und stderr, da manche Befehle ihre Ausgabe nach stderr schreiben
+            output_parts = []
+            if result.stdout and result.stdout.strip():
+                output_parts.append(result.stdout.strip())
+            if result.stderr and result.stderr.strip():
+                output_parts.append(result.stderr.strip())
+            output = "\n".join(output_parts) if output_parts else "(kein Output)"
             
     except subprocess.TimeoutExpired:
         return "Fehler: Befehl hat das Timeout von 5 Minuten (300 Sekunden) überschritten"

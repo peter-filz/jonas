@@ -782,7 +782,7 @@ def print_startup_screen():
     print_boxed_raw(" ####     #####   #     #  #     #  ###### ", width)
     print_boxed_text("", width)  # Leerzeile
     print_boxed_text("(Just Operate Nicely And Securely)", width)
-    print_boxed_text_right("v1.4.3 by Peter Filz", width)
+    print_boxed_text_right("v1.4.5 by Peter Filz", width)
     print_boxed_text("", width)  # Leerzeile
     
     # Einleitung
@@ -1054,7 +1054,8 @@ def _handle_response_internal(response, max_iterations=10):
                     # Tool ausführen
                     result = run_shell_command(command, intention)
                     
-                    # Tracke erfolgreiche Befehle mit Output-ID
+                    # Tracke ALLE ausgeführten Befehle (auch fehlgeschlagene)
+                    # Dies ist wichtig, damit Jonas weiß, welche Befehle bereits ausgeführt wurden
                     
                     # Prüfe auf kleine Ausgabe mit versteckter Output-ID
                     if result.startswith("__STORED_AS_"):
@@ -1077,6 +1078,13 @@ def _handle_response_internal(response, max_iterations=10):
                                 "command": command,
                                 "output_id": output_id
                             })
+                    else:
+                        # Befehl wurde ausgeführt, aber hat keine Output-ID (z.B. Fehler)
+                        # Tracke ihn trotzdem, damit Jonas weiß, dass er ausgeführt wurde
+                        executed_commands.append({
+                            "command": command,
+                            "output_id": None
+                        })
             
             elif tool_name == "get_output_head":
                 # get_output_head benötigt keine Sicherheitsabfrage
@@ -1134,12 +1142,16 @@ def _handle_response_internal(response, max_iterations=10):
             tool_outputs.append(_make_tool_output(tool_call["call_id"], result, use_new_schema))
         
         # Alle Ergebnisse zurück ans Modell
-        current_response = client.responses.create(
+        new_response = client.responses.create(
             model=MODEL,
             tools=FUNCTION_TOOLS,
             previous_response_id=current_response.id,
             input=tool_outputs,
         )
+        
+        # Übertrage die executed_commands zur neuen Response
+        # (wichtig, damit sie nicht verloren gehen bei mehreren Iterationen)
+        current_response = new_response
         
         # Schleife läuft weiter und prüft, ob die neue Response weitere Tool-Calls enthält
     
@@ -1159,6 +1171,9 @@ def _handle_response_internal(response, max_iterations=10):
             "text": error_message,
         }],
     )
+    
+    # Speichere ausgeführte Befehle auch bei Timeout
+    final_response._executed_commands = executed_commands
     
     return final_response
 
@@ -1317,7 +1332,11 @@ def main():
                             if executed_cmds:
                                 console.print("[dim]Ausgeführte Befehle:[/dim]")
                                 for cmd in executed_cmds:
-                                    console.print(f"  [dim]• {cmd['command']} → {cmd['output_id']}[/dim]")
+                                    output_id = cmd.get('output_id')
+                                    if output_id:
+                                        console.print(f"  [dim]• {cmd['command']} → {output_id}[/dim]")
+                                    else:
+                                        console.print(f"  [dim]• {cmd['command']} (kein Output gespeichert)[/dim]")
                             
                             console.print()
                     
